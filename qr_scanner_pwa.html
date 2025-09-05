@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ứng Dụng Quét và Ghi Nhớ Mã QR (PWA)</title>
+    <!-- Liên kết đến tệp Manifest để biến ứng dụng thành PWA -->
+    <link rel="manifest" href="manifest.json">
+    <!-- Thêm thư viện Tailwind CSS để tạo kiểu dáng hiện đại -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Tùy chỉnh kiểu dáng cho video */
+        #camera-video {
+            width: 100%;
+            height: auto;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+        }
+        /* Kiểu dáng cho nội dung đã quét */
+        #result-display {
+            word-wrap: break-word;
+        }
+        /* Container chính cho ứng dụng */
+        .qr-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: #f7f7f7;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            font-family: 'Inter', sans-serif;
+            text-align: center;
+        }
+        .qr-list {
+            text-align: left;
+            margin-top: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            background-color: #fff;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="qr-container">
+        <h1 class="text-3xl font-bold text-gray-800">Ứng Dụng Quét và Ghi Nhớ Mã QR</h1>
+        <p class="text-gray-600 mt-2">Nhấn nút để bắt đầu quét mã QR từ camera của bạn.</p>
+        <video id="camera-video" class="w-full rounded-lg shadow-md mt-4"></video>
+        <p id="loading-indicator" class="hidden text-center text-blue-600 mt-4">Đang khởi động...</p>
+        <div id="result-display" class="mt-4 text-center"></div>
+        <button id="start-btn" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:bg-blue-700 transition-colors mt-4">Bắt đầu quét</button>
+
+        <div class="mt-8">
+            <h2 class="text-2xl font-bold text-gray-800">Danh sách mã đã quét</h2>
+            <div id="qr-list" class="qr-list mt-2">
+                <p class="text-gray-500">Chưa có mã nào được quét.</p>
+            </div>
+            <button id="export-all-btn" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-full shadow hover:bg-purple-700 transition-colors mt-4 hidden">Xuất toàn bộ dữ liệu</button>
+        </div>
+    </div>
+
+    <!-- Thêm thư viện ZXing để quét QR code -->
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <script>
+        // Lấy các phần tử DOM
+        const videoElement = document.getElementById('camera-video');
+        const startBtn = document.getElementById('start-btn');
+        const resultDisplay = document.getElementById('result-display');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const qrListElement = document.getElementById('qr-list');
+        const exportAllBtn = document.getElementById('export-all-btn');
+
+        let codeReader;
+        let isScanning = false;
+        let scannedData = []; // Mảng để lưu trữ dữ liệu đã quét
+
+        // Đăng ký Service Worker
+        if ('serviceWorker' in navigator) {
+            // Kiểm tra xem ứng dụng có được chạy trên máy chủ web không
+            if (window.location.protocol !== 'http:' && window.location.protocol !== 'https:') {
+                console.error('Lỗi: Ứng dụng PWA cần được chạy từ một máy chủ web (giao thức http hoặc https) để đăng ký Service Worker.');
+                // Thêm thông báo trên giao diện người dùng
+                const message = document.createElement('div');
+                message.className = 'bg-red-500 text-white p-4 rounded-lg mt-4';
+                message.textContent = 'Lỗi: Vui lòng chạy ứng dụng từ một máy chủ web.';
+                document.body.appendChild(message);
+            } else {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('sw.js').then(registration => {
+                        console.log('Service Worker đã đăng ký thành công:', registration.scope);
+                    }).catch(err => {
+                        console.error('Đăng ký Service Worker thất bại:', err);
+                    });
+                });
+            }
+        }
+
+        async function startScanning() {
+            try {
+                // Hiển thị chỉ báo tải
+                loadingIndicator.classList.remove('hidden');
+                loadingIndicator.textContent = 'Đang khởi động camera...';
+                startBtn.textContent = 'Đang quét...';
+                startBtn.disabled = true;
+                resultDisplay.innerHTML = ''; // Xóa kết quả cũ
+
+                // Yêu cầu quyền truy cập camera
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                videoElement.srcObject = stream;
+                await videoElement.play();
+
+                // Tạo đối tượng đọc mã QR
+                codeReader = new ZXing.BrowserMultiFormatReader();
+
+                // Bắt đầu quét từ video stream
+                codeReader.decodeFromVideoElement(videoElement, (result, err) => {
+                    if (result) {
+                        // Dừng quá trình quét khi tìm thấy kết quả
+                        stopScanning();
+
+                        // Xử lý và hiển thị kết quả
+                        handleScanResult(result.text);
+                    }
+                    if (err && !(err instanceof ZXing.NotFoundException)) {
+                        console.error('Lỗi khi quét:', err);
+                        loadingIndicator.textContent = 'Lỗi khi quét. Thử lại.';
+                    }
+                });
+
+                isScanning = true;
+                loadingIndicator.classList.add('hidden');
+                startBtn.textContent = 'Dừng quét';
+                startBtn.disabled = false;
+            } catch (err) {
+                console.error('Lỗi khởi động camera:', err);
+                loadingIndicator.textContent = 'Lỗi: Không thể khởi động camera. Vui lòng cho phép truy cập.';
+                startBtn.textContent = 'Thử lại';
+                startBtn.disabled = false;
+            }
+        }
+
+        function stopScanning() {
+            if (codeReader) {
+                codeReader.reset();
+            }
+            if (videoElement.srcObject) {
+                videoElement.srcObject.getTracks().forEach(track => track.stop());
+                videoElement.srcObject = null;
+            }
+            isScanning = false;
+            startBtn.textContent = 'Bắt đầu quét';
+            startBtn.disabled = false;
+            loadingIndicator.classList.add('hidden');
+        }
+
+        // Xử lý kết quả quét
+        function handleScanResult(text) {
+            // Thêm dữ liệu mới vào mảng
+            scannedData.push({ text: text, timestamp: new Date().toLocaleString() });
+
+            // Cập nhật giao diện
+            updateQrList();
+            showResult(text);
+        }
+
+        // Cập nhật danh sách mã đã quét trên giao diện
+        function updateQrList() {
+            if (scannedData.length === 0) {
+                qrListElement.innerHTML = '<p class="text-gray-500">Chưa có mã nào được quét.</p>';
+                exportAllBtn.classList.add('hidden');
+            } else {
+                qrListElement.innerHTML = scannedData.map(item =>
+                    `<div class="flex flex-col border-b border-gray-200 py-2">
+                        <span class="text-sm text-gray-600">${item.timestamp}</span>
+                        <p class="break-words text-gray-800 font-medium">${item.text}</p>
+                    </div>`
+                ).join('');
+                exportAllBtn.classList.remove('hidden');
+            }
+            qrListElement.scrollTop = qrListElement.scrollHeight; // Cuộn xuống cuối
+        }
+
+        // Hiển thị kết quả và các nút thao tác
+        function showResult(text) {
+            resultDisplay.innerHTML = `
+                <h3 class="text-lg font-bold">Kết quả gần đây:</h3>
+                <p class="text-gray-800 break-words my-2 p-3 bg-gray-100 rounded-lg">${text}</p>
+                <button id="copy-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-full shadow hover:bg-blue-700 transition-colors">Sao chép</button>
+            `;
+            document.getElementById('copy-btn').addEventListener('click', () => copyToClipboard(text));
+        }
+
+        // Sao chép nội dung vào clipboard
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            // Hiển thị thông báo đã sao chép
+            const copyMessage = document.createElement('div');
+            copyMessage.textContent = 'Đã sao chép!';
+            copyMessage.className = 'fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full shadow-lg transition-opacity duration-300';
+            document.body.appendChild(copyMessage);
+            setTimeout(() => copyMessage.remove(), 2000);
+        }
+
+        // Xuất toàn bộ nội dung đã quét thành tệp văn bản
+        function exportAllToFile() {
+            if (scannedData.length === 0) {
+                return;
+            }
+            const content = scannedData.map(item => `Thời gian: ${item.timestamp}\nNội dung: ${item.text}\n---\n`).join('');
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'toan_bo_du_lieu_qr_da_quet.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Xử lý sự kiện click nút
+        startBtn.addEventListener('click', () => {
+            if (isScanning) {
+                stopScanning();
+            } else {
+                startScanning();
+            }
+        });
+
+        exportAllBtn.addEventListener('click', exportAllToFile);
+        updateQrList(); // Khởi tạo danh sách khi tải trang
+    </script>
+</body>
+</html>

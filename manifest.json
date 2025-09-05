@@ -1,0 +1,15 @@
+{
+  "name": "QR Scanner PWA",
+  "short_name": "QR Scanner",
+  "description": "Một ứng dụng quét và lưu trữ mã QR.",
+  "start_url": "/qr_scanner_pwa.html",
+  "display": "standalone",
+  "background_color": "#f7f7f7",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTcgN2gyVjVoMnYySDdWNW03IDBoMi4wMThWMThIMTQiVjk2Njl6IiBmaWxsPSIjREREREREIi8+PHBhdGggZD0iTTMgMTloMnYySDN6TTUgMTloMlYxN2g0djJIOXYySDV6TTMgM2gyVjFoMnYySDNWMTFoMnYySDV6TTcgM2gxdjJoMnYyaDJWM2gtNnptMCA4djJoMmgyVjExSDd6bTgtOHYyaDF2LTJoLTEuMDAwMHptNCAwdjJoMXYtMmgtdjBoLTF6bS00IDdoLTJoMnYySDExem00LTh2MmgxdjJoMXYtMmgxdi0yaC0xdjJoLTN6bTAtM3YyaDF2LTJoLTF6bS02IDhoMnYySDl6bTQtOHYyaDN2LTJoLTN6bTEgMTRoMnYySDE2em02IDJ2MmgyVjE4aC0yVjE4em0tMiAwdi0yaDR2MmgtdjBoLTR6bTMtMmgxdjJoLTEuMDAwMFYxNHptLTYgMWgyVjIxSDd2LTJoMnYyem0tMiAyaDF2LTIyaC0xdjJ6bTctMnYxaDJ2LTJoLTJ6bS0zIDdoMnYySDExem0wIDJoMnYiaDN2LTJoLTN6bTcgMGgyVjIySDE5VjE0em0tNS0yYzAtLjU1MjMtLjQ0NzctMS0xLTFzLTEgLjQ0NzctMSAxIC41NTIzIDEgMS4xIDEtMS0uNDQ3Ny0xLTF6bTMtMi43NzZWMjFoMnYySDE3VjE5em0tNS02aDJ2MmgtMlY4em0wIDNoMnYiaC0yVjExem0zIDhoMnYySDE2em0xIDZoMnYySDE5VjE1aDJ2MmgtMnYyaDJ2LTJ6bTktMmgyVjE1aDF2MmgtdjBoLTF6bTItOGgzdjJoLTN6bTAgMnIySDl2LTJoLTZ6bTEgMmgxdjJoLTF6bTAtM2gxdjJoLTF2LTJ6bTctNmgzdjJoLTN6bTcgMmgtMnYySDZ2MWgxdjJoMXYtMmgzdjJoMnYtMmgzdjIuMzY4TDIwIDIwdjJoLTJ2MmgtdjJoMnYtMmgxem0tNiA0aDJ2MmgtMnoiLz48L3N2Zz4=","sizes":"any","type":"image/svg+xml"}
+  ],
+  "orientation": "portrait",
+  "lang": "vi-VN"
+}
